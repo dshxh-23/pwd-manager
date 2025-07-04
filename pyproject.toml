@@ -1,0 +1,10 @@
+[project]
+name = "pwd-manager"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "cryptography>=45.0.5",
+    "pyperclip>=1.9.0",
+]
