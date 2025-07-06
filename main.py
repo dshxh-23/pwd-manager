@@ -2,7 +2,7 @@ import sys
 import json
 import os
 import pyperclip
-from my_lib import getters, utilities
+from my_py_lib import getters, utilities
 
 # === CLI Decorations ===
 BANNER = """
@@ -59,7 +59,7 @@ def set_master_password():
 def register_new_user(name):
     os.makedirs("vaults", exist_ok=True)
     m_pwd = set_master_password()
-    vault_data = make_vault(m_pwd, name)
+    vault_data = make_vault(m_pwd)
     save_vault(vault_data, name)
 
 
