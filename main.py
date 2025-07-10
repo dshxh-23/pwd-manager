@@ -1,264 +1,202 @@
 import sys
 import json
 import os
-import argparse
 import pyperclip
-from my_py_lib import getters, utilities
+from my_py_lib import getters, printers, setters, utilities
 
-# CRYPTOGRAPHIC FUNCTIONS AND ENCRYPTED VAULT HANDLING (moved below dependencies)
-import base64
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.backends import default_backend
-from cryptography.fernet import Fernet
-import secrets
 
-# === CLI Decorations ===
+
+### =============== CONSTANTS =============== ###
 BANNER = """
 =====================================
    🔐 Welcome to Password Manager!   
 =====================================
 """
-SEPARATOR = "-------------------------------------"
+SEPARATOR = "-----------------------------------"
+VAULT_DIR = "vaults"
+PWD_ATTEMPTS = 2
 
 
-def main():
-    """Entry point for the Password Manager CLI app."""
-    print(BANNER)
-    args = parse_args()
 
-    # Quick retrieval mode via CLI arguments
-    if args.name and args.pwd and args.acc:
-        quick_retrieve(args)
-        return
+### =============== PASSWORD VAULT =============== ###
+class PasswordVault:
 
-    # Interactive mode
-    user_name = get_name()
-    utilities.print_ellipsis("Searching the database", 2)
+    # Constructor
+    def __init__(self, name):
+        """
+        Initialize the PasswordVault. If the vault exists, load and decrypt it.
+        If not, create a new vault with the provided master password.
+        Raises ValueError if master_password is not provided when required.
+        """
 
-    if not user_exists(user_name):
-        # Offer registration if user does not exist
-        choice = getters.get_choice("y", "n", prompt=f"User '{user_name}' does not exist. Do you want to register?")
-        if choice == "y":
-            register_new_user(user_name)
-            print("\nUser successfully registered. Please log in to continue.\n")
-            print(SEPARATOR)
-            user_name = get_name()  # Ask for username again before login
+        """
+        ALL VAULT FUNCTIONALITIES:
+        """
+        self.name = name.lower().strip()
+        self.file_path = os.path.join(VAULT_DIR, f".{self.name}.json")
+
+        # Log-in if user account already exists
+        if os.path.exists(self.file_path):
+            choice = getters.get_choice("y", "n", prompt="An account already exists.. Do you want to log-in?")
+            
+            # Exit if user does not want to do anything
+            if not choice == 'y':
+                sys.exit("See you soon...")
+                
+            # Load vault data    
+            self.vault_data = self._load_vault()
+
+            # Authenticate user
+            if not self._authenticate_user():
+                sys.exit("User authentication failed..")
+
         else:
-            print("Exiting...")
-            sys.exit(0)
-
-    start_app(user_name)
+            print("Account does not exist. Creating a new account")
+            self._create_vault()
 
 
-def parse_args():
-    """Parse command-line arguments for quick retrieval."""
-    parser = argparse.ArgumentParser(description="Store all your passwords securely")
-    parser.add_argument("--name", help="Name of the user", default="")
-    parser.add_argument("--pwd", help="Master password", default="")
-    parser.add_argument("--acc", help="Account name", default="")
-    return parser.parse_args()
+    ## ------------ VAULT OPERATIONS ------------ ##
+    # Save vault in a json file
+    def _save_vault(self, vault_data):
+        with open(self.file_path, "w") as file:
+            json.dump(vault_data, file, indent=4)
+        self.vault_data = vault_data
+    
+    # Create new empty vault
+    def _create_vault(self):
+        m_pwd = setters.set_pwd()
+        vault_data = {
+            "user_name" : self.name,
+            "master_password" : m_pwd,
+            "data" : {},
+        }
+        self._save_vault(vault_data)
+
+    # To initially load vault data into self.vault_data variable
+    def _load_vault(self):
+        with open(self.file_path, "r") as file:
+            vault_data = json.load(file)
+        return vault_data
+    
+    # Append new data to vault
+    def _add_acc_to_vault(self, acc_name, acc_data):
+        """ pass acc name as a string and acc details as a dict """
+        vault_data = self._load_vault()
+        vault_data["data"][acc_name] = acc_data
+        self._save_vault(vault_data)
+
+    def _authenticate_user(self):
+        m_pwd = self.vault_data["master_password"]
+        if not utilities.chk_pwd(m_pwd, attempts=PWD_ATTEMPTS):
+            return False
+        else:
+            print("Successfully logged-in")
+            return True
+        
+    
+    ## ------------ USER OPERATIONS ------------ ##
+    # Select what user want's to do
+    def get_operation(self):
+        print(SEPARATOR)
+        print("\nWhat would you like to do?")
+        print("1.\tRecord new account details")
+        print("2.\tView existing account details")
+        print("3.\tModify existing account details")
+        print("4.\tLogout")
+        print(SEPARATOR)
+        return getters.get_int(min_value=1, max_value=4)
+
+    # Record a new account to vault
+    def record_acc(self):
+        print(SEPARATOR)
+        print("\nEnter new account details:")
+        acc_name = input("Account Name: ")
+        acc_email = input("Account Email: ")
+        acc_id = input("User ID: ")
+        acc_pwd = getters.get_pwd("Account Password: ")
+        acc_data = {
+            "email" : acc_email,
+            "user_id" : acc_id,
+            "password" : acc_pwd,
+        }
+        self._add_acc_to_vault(acc_name, acc_data)
+        printers.print_ellipsis("Saving", n=3, delay=0.3)
+        print("Account added successfully!\n")
+        print(SEPARATOR)
+
+    # Retrieve acc details and copy password
+    def retrieve_acc(self, acc_name):
+        print(SEPARATOR)
+        if acc_name not in list(self.vault_data['data'].keys()):
+            print("No such account in the vault. Kindly add account first.\n")
+            print(SEPARATOR)
+            return
+        print(f"Account Name: {acc_name}")
+        print(f"Registered Email: {self.vault_data['data'][acc_name]['email']}")
+        print(f"User ID: {self.vault_data['data'][acc_name]['user_id']}")
+        pyperclip.copy(self.vault_data['data'][acc_name]['password'])
+        print("Password copied to clipboard!\n")
+        print(SEPARATOR)
+
+    # Modify a particular account details
+    def modify_acc(self, acc_name):
+        print(SEPARATOR)
+        if acc_name not in self.vault_data['data']:
+            print("No such account in the vault. Kindly add account first.\n")
+            print(SEPARATOR)
+            return
+
+        acc_data = self.vault_data['data'][acc_name]
+        print(f"Current details for '{acc_name}':")
+        print(f"  Email: {acc_data['email']}")
+        print(f"  User ID: {acc_data['user_id']}")
+        print("Leave a field blank to keep it unchanged.\n")
+
+        new_email = input("New Email: ").strip()
+        new_user_id = input("New User ID: ").strip()
+        change_pwd = getters.get_choice("y", "n", prompt="Change password?")
+
+        if new_email:
+            acc_data['email'] = new_email
+        if new_user_id:
+            acc_data['user_id'] = new_user_id
+        if change_pwd == "y":
+            acc_data['password'] = getters.get_pwd("New Password: ")
+
+        self._add_acc_to_vault(acc_name, acc_data)
+        printers.print_ellipsis("Updating", n=3, delay=0.3)
+        print("Account details updated successfully!\n")
+        print(SEPARATOR)
 
 
-def quick_retrieve(args):
-    """Quickly retrieve and copy a password using CLI arguments."""
-    if not user_exists(args.name):
-        sys.exit("User does not exist")
-    if not validate_user(args.name, args.pwd):
-        sys.exit("Incorrect password")
-    vault_data = load_vault(args.name)
-    if args.acc in vault_data['data']:
-        pyperclip.copy(vault_data['data'][args.acc]["password"])
-        sys.exit("\033[92mPassword copied to clipboard successfully!\033[0m")
-    else:
-        sys.exit("\033[91mAccount not found!\033[0m")
+### =============== CORE PROGRAM FLOW =============== ###
+def main():
+    os.makedirs(VAULT_DIR, exist_ok=True)
+    print(BANNER)
+
+    user_name = input("What's your first name? ")   # get user name
+    vault = PasswordVault(user_name)                # initialize vault
+
+    mainloop(vault)
 
 
-def get_name():
-    """Prompt the user for their name (non-empty, lowercase)."""
+def mainloop(vault):
     while True:
-        name = input("\nEnter your name: ").strip().lower()
-        if name:
-            return name
-        print("Name cannot be empty. Please try again.")
-
-
-def user_exists(name):
-    """Check if a user vault file exists."""
-    return os.path.exists(f"vaults/{name}.json")
-
-
-def set_master_password():
-    """Prompt user to set and confirm a master password using getters.get_pwd."""
-    m_pwd = getters.get_pwd("Set Master Password: ")
-    print("\033[92mMaster password set successfully!\033[0m\n")
-    return m_pwd
-
-
-def make_vault(m_pwd):
-    """Create a new vault data structure."""
-    return {
-        "master_password": m_pwd,
-        "data": {},
-    }
-
-
-def register_new_user(name):
-    """Register a new user and create their encrypted vault file."""
-    os.makedirs("vaults", exist_ok=True)
-    m_pwd = set_master_password()
-    salt = generate_salt()
-    key = derive_key(m_pwd, salt)
-    vault_data = make_vault(m_pwd)
-    encrypted_vault = encrypt_data(vault_data, key)
-    save_encrypted_vault(encrypted_vault, salt, name)
-
-
-def start_app(user_name):
-    """Authenticate user and present the main menu loop."""
-    tries = 3
-    for i in range(tries):
-        print(f"\n{SEPARATOR}")
-        pwd = getters.get_pwd(f"Enter master password for '{user_name}': ")
-        with open(f"vaults/{user_name}.json", "rb") as file:
-            salt = file.readline().strip()
-            encrypted = file.read()
-        key = derive_key(pwd, salt)
-        try:
-            vault_data = decrypt_data(encrypted, key)
-            print(f"\033[92mWelcome {user_name}! Successfully logged in!\033[0m\n")
-            break
-        except Exception:
-            if i < tries - 1:
-                print("\033[91mIncorrect Password! Try again.\033[0m")
-            else:
-                sys.exit("\033[91mToo many unsuccessful attempts...\033[0m")
-    else:
-        sys.exit("\033[91mFailed to login.\033[0m")
-
-    while True:
-        display_start_menu()
-        choice = getters.get_int("Select Option: ", min_value=1, max_value=3)
+        choice = vault.get_operation()
         match choice:
-            case 1:
-                new_pwd(user_name, vault_data, key)
-            case 2:
-                cpy_pwd(user_name, vault_data)
+            case 1: vault.record_acc()
+            case 2: 
+                acc_name = input(f"Which acc details do you want? {list(vault.vault_data['data'].keys())}: ")
+                vault.retrieve_acc(acc_name)
             case 3:
-                utilities.print_ellipsis("Logging out", 3)
-                print("\033[94mLogged out successfully!\033[0m")
-                sys.exit(0)
+                acc_name = input(f"Which acc details do you want to modify? {list(vault.vault_data['data'].keys())}")
+                vault.modify_acc(acc_name)
+            case 4: 
+                printers.print_ellipsis("Logging out", n=4, delay=0.5)
+                return
 
 
-def display_start_menu():
-    """Display the main menu options."""
-    print(f"\n{SEPARATOR}")
-    print("1.\tRecord new password")
-    print("2.\tView existing password")
-    print("3.\tLogout")
-    print(SEPARATOR)
 
-
-def new_pwd(user_name, vault_data, key):
-    """Add a new password entry to the user's vault."""
-    acc_name = input("Website/App: ").strip().lower()
-    email = input("Email: ").strip()
-    user_id = input("User ID: ").strip()
-    pwd = getters.get_pwd("Password: ")
-    vault_data["data"][acc_name] = {
-        "email": email,
-        "user_id": user_id,
-        "password": pwd,
-    }
-    save_vault(vault_data, user_name, key)
-    print("\033[92mPassword saved successfully!\033[0m")
-
-
-def cpy_pwd(user_name, vault_data):
-    """Copy an existing password to the clipboard."""
-    acc = input("Which account password do you want to copy? ").strip().lower()
-    if acc in vault_data['data']:
-        pyperclip.copy(vault_data['data'][acc]["password"])
-        print("\033[92mPassword copied to clipboard successfully!\033[0m")
-    else:
-        print("\033[91mAccount not found!\033[0m")
-
-
-# CRYPTOGRAPHIC FUNCTIONS AND ENCRYPTED VAULT HANDLING (moved below dependencies)
-def generate_salt(length=16):
-    """Generate a cryptographically secure random salt."""
-    return secrets.token_bytes(length)
-
-
-def derive_key(password, salt, iterations=390000):
-    """Derive a key from the password and salt using PBKDF2."""
-    kdf = PBKDF2HMAC(
-        algorithm=hashes.SHA256(),
-        length=32,
-        salt=salt,
-        iterations=iterations,
-        backend=default_backend(),
-    )
-    return base64.urlsafe_b64encode(kdf.derive(password.encode()))
-
-
-def encrypt_data(data, key):
-    """Encrypt data (dict) using the provided key."""
-    f = Fernet(key)
-    json_data = json.dumps(data).encode()
-    return f.encrypt(json_data)
-
-
-def decrypt_data(token, key):
-    """Decrypt data using the provided key."""
-    f = Fernet(key)
-    decrypted = f.decrypt(token)
-    return json.loads(decrypted.decode())
-
-
-def save_encrypted_vault(encrypted_vault, salt, name):
-    """Save the encrypted vault and salt to a JSON file."""
-    os.makedirs("vaults", exist_ok=True)
-    with open(f"vaults/{name}.json", "wb") as file:
-        # Store salt and encrypted vault as binary
-        file.write(salt + b"\n" + encrypted_vault)
-
-
-def save_vault(vault_data, name, key):
-    """Encrypt and save the vault data to a JSON file using the provided key."""
-    with open(f"vaults/{name}.json", "rb") as file:
-        salt = file.readline().strip()
-    encrypted_vault = encrypt_data(vault_data, key)
-    save_encrypted_vault(encrypted_vault, salt, name)
-
-
-def load_vault(name):
-    """Load and decrypt a user's vault data from file."""
-    with open(f"vaults/{name}.json", "rb") as file:
-        salt = file.readline().strip()
-        encrypted = file.read()
-    for _ in range(3):
-        pwd = getters.get_pwd("Enter master password: ")
-        key = derive_key(pwd, salt)
-        try:
-            return decrypt_data(encrypted, key)
-        except Exception:
-            print("\033[91mIncorrect password or corrupted vault!\033[0m")
-    sys.exit("\033[91mFailed to load vault: incorrect password.\033[0m")
-
-
-def validate_user(name, pwd):
-    """Check if the provided password matches the user's master password by attempting decryption."""
-    with open(f"vaults/{name}.json", "rb") as file:
-        salt = file.readline().strip()
-        encrypted = file.read()
-    key = derive_key(pwd, salt)
-    try:
-        vault_data = decrypt_data(encrypted, key)
-        return vault_data["master_password"] == pwd
-    except Exception:
-        return False
-
-
+### =============== CALL MAIN =============== ###
 if __name__ == "__main__":
     main()
