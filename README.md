@@ -1,10 +1,10 @@
 # 🔐 Password Manager (Python CLI)
 
-A command-line password manager that allows users to store, retrieve, and manage their account credentials locally. User authentication is supported using a master password.
+A command-line password manager that allows you to securely store, retrieve, and manage your account credentials locally. User authentication is enforced using a master password. Passwords are copied to your clipboard for convenience.
 
 ---
 
-## 📦 Features (Implemented in Version 1)
+## 🚀 Features
 
 - Create a new user profile with a master password
 - Log in with master password authentication
@@ -14,102 +14,82 @@ A command-line password manager that allows users to store, retrieve, and manage
     * User ID (optional)
     * Password (mandatory)
 - Copy passwords to clipboard using the `pyperclip` module
-- Data is stored locally in a per-user JSON file
+- Edit existing account details (email, user ID, password)
+- Data is stored locally in a per-user JSON file in the `vaults/` directory
+- Simple, user-friendly CLI with clear menus and separators
 
 ---
 
-## 🚦 How the Program Works
+## 🛠️ How to Use
 
 1. **Start the Program**
    - Run `python main.py` in your terminal.
 
 2. **User Identification**
-   - The program prompts you to enter your name.
-   - If you are a new user, you will be asked if you want to register.
+   - Enter your name when prompted.
+   - If you are a new user, you will be guided to create a master password.
+   - If you are an existing user, you will be prompted to log in with your master password.
 
-3. **Registering a New User**
-   - If you choose to register, you must set a master password (entered twice for confirmation).
-   - A new vault file is created for you in the `vaults/` directory, storing your master password and an empty data section.
-
-4. **Logging In**
-   - Existing users are prompted to enter their master password (up to 3 attempts).
-   - On successful login, you access your personal vault.
-
-5. **Main Menu Options**
+3. **Main Menu Options**
    - After login, you can:
-     1. **Record new password**: Add a new account with its password, email, and user ID.
-     2. **View existing password**: Retrieve and copy a password for a saved account to your clipboard.
-     3. **Logout**: Securely log out of the application.
+     1. **Record new account details**: Add a new account with its password, email, and user ID.
+     2. **View existing account details**: Retrieve and copy a password for a saved account to your clipboard.
+     3. **Modify existing account details**: Update the email, user ID, or password for any saved account.
+     4. **Logout**: Securely log out of the application.
 
-6. **Password Management**
-   - When adding a new password, you must confirm the password by entering it twice.
+4. **Password Management**
+   - When adding or modifying a password, you must enter the password securely (input is hidden).
    - All account data is saved in your personal JSON file inside `vaults/`.
 
-7. **Clipboard Integration**
+5. **Clipboard Integration**
    - When viewing a password, it is automatically copied to your clipboard using the `pyperclip` module.
 
 ---
 
-## 💾 Where Is Data Stored?
+## 💾 Data Storage
 
 All user data is stored in the `vaults/` directory.
 
-* Each user has a separate file named `<username>.json`
+* Each user has a separate file named `.username.json` (the username is lowercased and stripped of spaces).
 * Example structure of the JSON:
 
-  ```json
-  {
-    "master_password": "1234",
-    "data": {
-      "github.com": {
-        "email": "me@example.com",
-        "user_id": "dshxh-23",
-        "password": "my_password"
-      }
+```json
+{
+  "user_name": "dhyey",
+  "master_password": "1234",
+  "data": {
+    "github.com": {
+      "email": "me@example.com",
+      "user_id": "dshxh-23",
+      "password": "my_password"
     }
   }
-  ```
+}
+```
 
 ---
 
-## 💠 Planned Enhancements
+## 💡 Planned Enhancements
 
-Here are some features planned for future versions:
-
-1. **Command-line shortcuts**
-
-   * Quick password retrieval using:
-
-     ```bash
-     python main.py --name dhyey --pwd 1234 --acc github.com
-     ```
-
-2. **Edit existing password records**
-
-   * Modify email, user ID, or password for any saved account.
-
-3. **Password Encryption**
-
-   * Encrypt all stored passwords using the `cryptography` library (e.g., `Fernet`, PBKDF2 with salt).
-
-4. **Unit Tests**
-
-   * Add test coverage for core features using or `pytest`.
-
-5. **Random Password Generator**
-
-   * Add a tool to generate secure random passwords for new accounts.
+- **Command-line shortcuts**
+  - Quick password retrieval using command-line arguments (e.g., `python main.py --name dhyey --pwd 1234 --acc github.com`)
+- **Password Encryption**
+  - Encrypt all stored passwords using the `cryptography` library (e.g., `Fernet`, PBKDF2 with salt)
+- **Unit Tests**
+  - Add test coverage for core features using `pytest`
+- **Random Password Generator**
+  - Add a tool to generate secure random passwords for new accounts
+- **Improved CLI UI**
+  - Use libraries like `tabulate` or `rich` for better table formatting and colored output
 
 ---
 
 ## 🤝 Contributions
 
-Suggestions and contributions are welcome! Feel free to fork the repo and submit a pull request once features are added or improved.
+Suggestions and contributions are welcome! Feel free to fork the repo and submit a pull request to add or improve features.
 
 ---
 
 ## 📄 License
 
 This project is open-source and available under the [MIT License](LICENSE).
-
----
