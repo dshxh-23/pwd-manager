@@ -1,6 +1,7 @@
 import sys
 import json
 import os
+import argparse
 import pyperclip
 from my_py_lib import getters, printers, setters, utilities
 
@@ -33,7 +34,7 @@ class PasswordVault:
         ALL VAULT FUNCTIONALITIES:
         """
         self.name = name.lower().strip()
-        self.file_path = os.path.join(VAULT_DIR, f".{self.name}.json")
+        self.file_path = os.path.join(VAULT_DIR, f"{self.name}.json")
 
         # Log-in if user account already exists
         if os.path.exists(self.file_path):
@@ -169,11 +170,44 @@ class PasswordVault:
         print(SEPARATOR)
 
 
+
+### =============== PASSWORD RETRIEVAL USING ARGUMENTS =============== ###
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--name', default="", help="your name (in lowecase)")
+    parser.add_argument('--pwd', default="", help="master password")
+    parser.add_argument('--acc', default="", help="acc name")
+    return parser.parse_args()
+
+
+def quick_retrieve(args):
+    if not os.path.exists(f"{VAULT_DIR}/{args.name}.json"):
+        sys.exit("User does not exist")
+
+    with open(f"{VAULT_DIR}/{args.name}.json") as file:
+        vault_data = json.load(file)
+    
+    if not args.pwd == vault_data["master_password"]:
+        sys.exit("Invalid password")
+    
+    if args.acc not in list(vault_data['data'].keys()):
+        sys.exit("Account does not exist.")
+    
+    pyperclip.copy(vault_data['data'][args.acc]['password'])
+    print("Password successfully copied to clipboard")
+
 ### =============== CORE PROGRAM FLOW =============== ###
 def main():
-    os.makedirs(VAULT_DIR, exist_ok=True)
-    print(BANNER)
+    
+    # For quick retrival using CLA
+    args = parse_args()
+    if args.name and args.pwd and args.acc:
+        quick_retrieve(args)
+        return
 
+    # Start application
+    print(BANNER)
+    os.makedirs(VAULT_DIR, exist_ok=True)
     user_name = input("What's your first name? ")   # get user name
     vault = PasswordVault(user_name)                # initialize vault
 
