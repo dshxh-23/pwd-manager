@@ -4,7 +4,7 @@ A command-line password manager that allows you to securely store, retrieve, and
 
 ---
 
-## 🚀 Features
+## Features
 
 - Create a new user profile with a master password
 - Log in with master password authentication
@@ -17,32 +17,49 @@ A command-line password manager that allows you to securely store, retrieve, and
 - Edit existing account details (email, user ID, password)
 - Data is stored locally in a per-user JSON file in the `vaults/` directory
 - Simple, user-friendly CLI with clear menus and separators
+- Quick password retrieval using command-line arguments
 
 ---
 
-## 🛠️ How to Use
+## How to Use
 
-1. **Start the Program**
+### 1. **Start the Program**
    - Run `python main.py` in your terminal.
 
-2. **User Identification**
+### 2. **User Identification**
    - Enter your name when prompted.
    - If you are a new user, you will be guided to create a master password.
    - If you are an existing user, you will be prompted to log in with your master password.
 
-3. **Main Menu Options**
+### 3. **Main Menu Options**
    - After login, you can:
      1. **Record new account details**: Add a new account with its password, email, and user ID.
      2. **View existing account details**: Retrieve and copy a password for a saved account to your clipboard.
      3. **Modify existing account details**: Update the email, user ID, or password for any saved account.
      4. **Logout**: Securely log out of the application.
 
-4. **Password Management**
+### 4. **Password Management**
    - When adding or modifying a password, you must enter the password securely (input is hidden).
    - All account data is saved in your personal JSON file inside `vaults/`.
 
-5. **Clipboard Integration**
+### 5. **Clipboard Integration**
    - When viewing a password, it is automatically copied to your clipboard using the `pyperclip` module.
+
+---
+
+## Quick Password Retrieval (Command-Line Arguments)
+
+You can quickly copy a password to your clipboard without entering the interactive menu by using command-line arguments:
+
+```sh
+python main.py --name <your_name> --pwd <master_password> --acc <account_name>
+```
+
+- If the credentials are correct, the password for the specified account will be copied to your clipboard and a confirmation message will be shown.
+- Example:
+  ```sh
+  python main.py --name dhyey --pwd 1234 --acc github.com
+  ```
 
 ---
 
@@ -50,7 +67,7 @@ A command-line password manager that allows you to securely store, retrieve, and
 
 All user data is stored in the `vaults/` directory.
 
-* Each user has a separate file named `.username.json` (the username is lowercased and stripped of spaces).
+* Each user has a separate file named `<username>.json` (the username is lowercased and stripped of spaces).
 * Example structure of the JSON:
 
 ```json
@@ -71,8 +88,6 @@ All user data is stored in the `vaults/` directory.
 
 ## 💡 Planned Enhancements
 
-- **Command-line shortcuts**
-  - Quick password retrieval using command-line arguments (e.g., `python main.py --name dhyey --pwd 1234 --acc github.com`)
 - **Password Encryption**
   - Encrypt all stored passwords using the `cryptography` library (e.g., `Fernet`, PBKDF2 with salt)
 - **Unit Tests**
